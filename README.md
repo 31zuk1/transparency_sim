@@ -82,3 +82,19 @@ the direct policy run exactly (transport fidelity). Live calls require an
 explicit `--live` flag plus a provider key in the environment, are capped,
 and never appear in tests or CI. API keys are read from environment
 variables and never logged.
+
+## Arm A experiment grid (offline rehearsal now; live collection by operator)
+
+`grid.py` and `scripts/run_arm_a_grid.py` define the preregistration-ready
+grid: series P1 (monotonicity in q), P2 (equal-growth-rate erosion), and P3
+(the two-sided budget bracket at q = 150). The `a0` arm computes the exact
+calibration surface (D_seed_1, D_seed_inf) for every corpus instance,
+including a dense B sweep for P3; the `offline` arm rehearses the entire
+grid through the text protocol with the scripted client; the `live` arm is
+resumable, capped by --max-new-runs, triple-guarded, and never runs in
+tests or CI. `aggregate_arm_a.py` emits per-run and per-cell tables with
+both distortions, their gap, budget utilization, and the precision table
+that fixes instance counts for preregistration. `make_fig2.py` renders the
+figure-2 layout; offline sources are watermarked as rehearsal and are not
+results. Finalized records are promoted to the tracked `data/arm_a/`
+directory (see RUNBOOK_ARM_A.md).

@@ -1,0 +1,14 @@
+{
+  "config_name": "arm_a_rehearsal_offline",
+  "r": 5,
+  "depth": "inf",
+  "delta": 0.5,
+  "instances_per_cell": 1,
+  "reps_per_instance": 2,
+  "instance_seed_base": 424242,
+  "live_allowed": false,
+  "cells": [
+    {"q": 30, "c": 0.0, "B": 6, "series": ["P1"]},
+    {"q": 30, "c": 1.0, "B": 6, "series": ["P3"]}
+  ]
+}

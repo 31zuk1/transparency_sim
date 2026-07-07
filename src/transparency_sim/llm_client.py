@@ -21,6 +21,26 @@ class LLMClient(Protocol):
         """messages are [{"role": "user"|"assistant", "content": str}, ...]."""
 
 
+def extract_openai_output_text(response) -> str:
+    """Join all text parts of a Responses API result with newlines.
+
+    Some responses carry multiple output items; concatenating them without a
+    separator can fuse commands (observed in the live pilot as e.g.
+    'LISTLIST'). Joining with newlines lets the final-nonempty-line parse
+    rule recover the last command. Falls back to `output_text` when the
+    structured walk yields nothing.
+    """
+    parts: list[str] = []
+    for item in getattr(response, "output", None) or []:
+        for content in getattr(item, "content", None) or []:
+            text = getattr(content, "text", None)
+            if isinstance(text, str) and text:
+                parts.append(text)
+    if parts:
+        return "\n".join(parts)
+    return getattr(response, "output_text", "") or ""
+
+
 class AnthropicClient:
     def __init__(
         self,
@@ -95,7 +115,7 @@ class OpenAIClient:
             temperature=self._temperature,
             max_output_tokens=self._max_output_tokens,
         )
-        text = getattr(response, "output_text", "")
+        text = extract_openai_output_text(response)
         usage_obj = getattr(response, "usage", None)
         usage = None
         if usage_obj is not None:

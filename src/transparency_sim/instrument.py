@@ -14,6 +14,7 @@ class InstrumentSpec:
     max_output_tokens: int = 300
     prompt_version: str = "blind-id-v1"
     protocol_version: str = "1"
+    harness_version: str = "1.1"
     max_turns: int = 60
     max_protocol_errors: int = 5
     requested_seed: int | None = None

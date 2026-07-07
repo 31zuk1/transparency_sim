@@ -240,6 +240,8 @@ def run_llm_blind_id(
     budget: int,
     depth: int | str = "inf",
     record_path: Path | None = None,
+    *,
+    extra_meta: dict | None = None,
 ) -> LLMBlindIDRunResult:
     env = BlindIDEnvironment(corpus=corpus, budget=budget, depth=depth, kappa=0.0)
     policy = LLMBlindIDPolicy(client=client, instrument=instrument)
@@ -264,7 +266,17 @@ def run_llm_blind_id(
         usage=info.usage,
     )
     if record_path is not None:
-        _append_record(record_path, corpus, budget, depth, instrument, info, transcript, result)
+        _append_record(
+            record_path,
+            corpus,
+            budget,
+            depth,
+            instrument,
+            info,
+            transcript,
+            result,
+            extra_meta,
+        )
     return result
 
 
@@ -313,6 +325,7 @@ def _append_record(
     info: LLMRunInfo,
     transcript,
     result: LLMBlindIDRunResult,
+    extra_meta: dict | None,
 ) -> None:
     record = {
         "schema_version": 1,
@@ -335,6 +348,8 @@ def _append_record(
         "usage": result.usage,
         "timestamp_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
+    if extra_meta is not None:
+        record["grid_meta"] = extra_meta
     record_path.parent.mkdir(parents=True, exist_ok=True)
     with record_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record, sort_keys=True) + "\n")
