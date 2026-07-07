@@ -37,7 +37,7 @@ def test_fig1b_c0_line_is_q_times_one_minus_alpha():
         q = r * rho
         assert val == pytest.approx(q * (1 - alpha))
     # the legend advertises the same identity and no banned comparison quantity
-    assert "q(1 − α)" in FIG1B_LABELS["c0"]
+    assert r"q(1-\alpha)" in FIG1B_LABELS["c0"]
     banned = ["full " + "recovery", "stopping " + "time", "r/(r+1)", "r(q+1)/(r+1)"]
     for label in FIG1B_LABELS.values():
         for phrase in banned:

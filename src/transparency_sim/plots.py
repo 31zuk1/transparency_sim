@@ -8,6 +8,8 @@ Panel (b): the three budget lines against the dilution ratio rho = q/r:
 
 The c = 0 comparison quantity is the required budget under the linear
 recovery-distortion map (Assumption 4), B*(delta; q, 0) = q(1 - alpha).
+The lower bound nearly coincides with the c = 1 line by construction:
+the bracket width is (r - 1)(1 - alpha^(1/r)) < r documents (Prop. 3(ii)).
 """
 from __future__ import annotations
 
@@ -21,9 +23,9 @@ FIG1A_PARAMS = {"q": 150, "r": 5}
 FIG1B_PARAMS = {"r": 5, "alpha": 0.05, "rho_min": 10, "rho_max": 500}
 
 FIG1B_LABELS = {
-    "lower": "all L:  B*(δ; q, c) ≥ (q − r + 1)(1 − α^(1/r))",
-    "c1": "c = 1:  B*(δ; q, 1) ≤ q(1 − α^(1/r))",
-    "c0": "c = 0:  B*(δ; q, 0) = q(1 − α)  (linear loss)",
+    "lower": r"universal lower bound (all $c$, all $L$): $(q{-}r{+}1)(1-\alpha^{1/r})$",
+    "c1": r"$c = 1$:  $B^*(\delta;q,1) \leq q(1-\alpha^{1/r})$",
+    "c0": r"$c = 0$:  $B^*(\delta;q,0) = q(1-\alpha)$  (linear loss)",
 }
 
 
@@ -37,7 +39,7 @@ def fig1a_curves(q: int, r: int) -> dict[str, np.ndarray]:
     }
 
 
-def fig1b_lines(rhos: np.ndarray, r: int, alpha: float) -> dict[str, np.ndarray]:
+def fig1b_lines(rhos, r: int, alpha: float) -> dict[str, np.ndarray]:
     qs = r * np.asarray(rhos, dtype=float)
     return {
         "rho": np.asarray(rhos, dtype=float),
@@ -59,15 +61,15 @@ def make_fig1(out_png: Path, out_pdf: Path) -> None:
     a = fig1a_curves(q, r)
     ax = axes[0]
     ax.plot(a["B"], a["upper"], "--", lw=1.2, color="#888888",
-            label="upper:  (1 − B/q)^r")
+            label=r"upper: $(1 - B/q)^{r}$")
     ax.plot(a["B"], a["exact"], "-", lw=1.8, color="#1a5276",
-            label="exact:  Pr(m = 0) = C(q−r, B)/C(q, B)")
+            label=r"exact: $\Pr(m{=}0) = C(q{-}r,\,B)\,/\,C(q,\,B)$")
     ax.plot(a["B"], a["lower"], ":", lw=1.4, color="#b03a2e",
-            label="lower:  (1 − B/(q−r+1))^r")
-    ax.set_xlabel("direct-acquisition budget B")
-    ax.set_ylabel("Pr(m = 0)")
-    ax.set_title(f"(a) Seed-failure probability and two-sided bounds\n"
-                 f"(q = {q}, r = {r}; Prop. 3, App. A.4)", fontsize=10)
+            label=r"lower: $(1 - B/(q{-}r{+}1))^{r}$")
+    ax.set_xlabel(r"direct-acquisition budget $B$")
+    ax.set_ylabel(r"$\Pr(m = 0)$")
+    ax.set_title("(a) Seed-failure probability and two-sided bounds\n"
+                 + rf"($q = {q}$, $r = {r}$; Prop. 3, App. A.4)", fontsize=10)
     ax.legend(fontsize=8, frameon=False)
     ax.set_xlim(0, q - r)
     ax.set_ylim(0, 1)
@@ -81,12 +83,19 @@ def make_fig1(out_png: Path, out_pdf: Path) -> None:
     ax.fill_between(b["rho"], b["lower"], b["c1"], color="#1a5276", alpha=0.25, lw=0)
     ax.plot(b["rho"], b["c1"], "-", lw=1.6, color="#1a5276", label=FIG1B_LABELS["c1"])
     ax.plot(b["rho"], b["lower"], ":", lw=1.6, color="#b03a2e", label=FIG1B_LABELS["lower"])
-    ax.set_xlabel("dilution ratio ρ = q/r")
-    ax.set_ylabel("required budget B*(δ; q, c)")
-    ax.set_title(f"(b) Structure buys the coefficient, not the scaling\n"
-                 f"(r = {r}, α = δ/D₀ = {alpha}; Assumption 4)", fontsize=10)
+    ax.annotate("lower bound nearly coincides with the $c = 1$ line:\n"
+                r"bracket width $(r{-}1)(1-\alpha^{1/r}) < r$ documents",
+                xy=(330, float(fig1b_lines([330], r, alpha)["c1"][0])),
+                xytext=(150, 1350), fontsize=7.5,
+                arrowprops=dict(arrowstyle="->", lw=0.8, color="#444444"))
+    ax.set_xlabel(r"dilution ratio $\rho = q/r$")
+    ax.set_ylabel(r"required budget $B^*(\delta;\,q,\,c)$")
+    ax.set_title("(b) Structure buys the coefficient, not the scaling\n"
+                 + rf"($r = {r}$, $\alpha = \delta/D_0 = {alpha}$; Assumption 4)",
+                 fontsize=10)
     ax.legend(fontsize=8, frameon=False, loc="upper left")
     ax.set_xlim(FIG1B_PARAMS["rho_min"], FIG1B_PARAMS["rho_max"])
+    ax.set_ylim(bottom=0)
 
     fig.tight_layout()
     out_png.parent.mkdir(parents=True, exist_ok=True)

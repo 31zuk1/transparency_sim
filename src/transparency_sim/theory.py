@@ -73,3 +73,30 @@ def budget_c0_linear(q: int, alpha: float) -> float:
 def _check_alpha(alpha: float) -> None:
     if not (0.0 < alpha < 1.0):
         raise ValueError(f"need 0 < alpha < 1, got alpha={alpha}")
+
+
+def ef_one_hop(q: int, r: int, B: int, c: float) -> float:
+    """Graph-averaged expected recovery E[F_1] of the batch-then-track
+    baseline at depth 1 -- the closed form of draft eq. (3):
+
+        E[F_1] = sum_k Pr(m = k) * [ k + (r - k)(1 - (1 - c)^k) ].
+
+    This is an expectation over BOTH the hypergeometric seed draw AND the
+    random reference graph (each ordered core pair linked iid w.p. c).
+    It is therefore NOT comparable to A0 on a single fixed corpus, which
+    computes the conditional expectation given the realized graph.
+    Agreement holds after averaging over graph generation, and exactly at
+    c = 0 and c = 1 where the graph is degenerate.
+    """
+    _check_qrB(q, r, B)
+    if not (0.0 <= c <= 1.0):
+        raise ValueError(f"need 0 <= c <= 1, got c={c}")
+    denom = comb(q, B)
+    total = 0.0
+    for k in range(0, min(r, B) + 1):
+        rest = B - k
+        if rest < 0 or rest > q - r:
+            continue
+        p = comb(r, k) * comb(q - r, rest) / denom
+        total += p * (k + (r - k) * (1.0 - (1.0 - c) ** k))
+    return total

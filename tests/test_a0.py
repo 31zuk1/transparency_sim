@@ -62,3 +62,38 @@ def test_no_banned_phrases_in_code_or_docs():
         text = path.read_text(encoding="utf-8").lower()
         for phrase in banned:
             assert phrase.lower() not in text, f"{phrase!r} found in {path}"
+
+
+def test_graph_averaged_d1_matches_closed_form_by_full_enumeration():
+    # E over ALL reference graphs (weights c^e (1-c)^(r(r-1)-e)) of the
+    # fixed-graph A0 value at d = 1 equals the closed form of eq. (3).
+    # Single fixed graphs need not match; only the graph average does.
+    from itertools import product
+    r, q, B = 3, 12, 4
+    cores = ("DOC_0001", "DOC_0002", "DOC_0003")
+    pairs = [(a, b) for a in cores for b in cores if a != b]  # 6 ordered pairs
+    for c in (0.3, 0.7):
+        avg = 0.0
+        for mask in product((0, 1), repeat=len(pairs)):
+            w = 1.0
+            adj = {x: set() for x in cores}
+            for bit, (a, b) in zip(mask, pairs):
+                if bit:
+                    adj[a].add(b)
+                    w *= c
+                else:
+                    w *= 1.0 - c
+            avg += w * expected_recovery(adj, cores, q=q, B=B, depth=1)
+        assert avg == pytest.approx(theory.ef_one_hop(q, r, B, c), abs=1e-12)
+
+
+def test_single_fixed_graph_need_not_match_closed_form():
+    # The empty graph is a positive-probability realization at c = 0.5, but
+    # its conditional value (= E[m] = Br/q) differs from the graph-averaged
+    # closed form. This documents the distinction A0 must respect.
+    r, q, B, c = 3, 12, 4, 0.5
+    cores = ("DOC_0001", "DOC_0002", "DOC_0003")
+    empty = {x: set() for x in cores}
+    fixed = 1 * expected_recovery(empty, cores, q=q, B=B, depth=1)
+    assert fixed == pytest.approx(B * r / q)
+    assert abs(fixed - theory.ef_one_hop(q, r, B, c)) > 0.1

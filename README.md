@@ -20,7 +20,11 @@ Scope of this round (deliberately minimal):
    exactly, the achieved distortion `D_seed_d` of the batch-then-track
    restricted policy class Π^seed on one fixed corpus (subset enumeration
    over the core set; depths `d = 1` and `d = "inf"`). A0 is a calibration
-   baseline for the theory surface. It is **not** the definitional infimum
+   baseline for the theory surface. The depth-1 closed form of eq. (3) is a
+   graph-generation average; A0 on one corpus is the conditional value on
+   the realized graph, so cross-checks against eq. (3) average over graphs
+   (an exact full-graph enumeration test at r = 3 is included).
+   A0 is **not** the definitional infimum
    D* over the full adaptive class Π_θ, and it never reads document bodies.
 
 Out of scope in this round: Figure 2, any LLM arm (Blind-ID / Metadata /
