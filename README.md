@@ -1,0 +1,64 @@
+# transparency_sim
+
+Companion code for draft v0.4, *More Disclosure, Less Transparency: Measuring
+Substantive Transparency for Resource-Bounded Observers*.
+
+Scope of this round (deliberately minimal):
+
+1. **Figure 1** — the two-sided budget bounds of Proposition 3 (§4.5, §5.6).
+   Panel (b) draws exactly three lines against the dilution ratio ρ = q/r:
+   the universal lower bound `(q−r+1)(1−α^(1/r))`, the achievable upper bound
+   at complete connectivity `q(1−α^(1/r))`, and the no-structure requirement
+   under the linear loss of Assumption 4, `B*(δ; q, 0) = q(1−α)`.
+2. **Synthetic environment generator** (`generator.py`) — small, inspectable
+   corpora satisfying Assumptions 1–4 of the draft, with per-instance leak
+   checks (no Y0 value in distractors; references among core documents only;
+   ids and display order uninformative; exactly one Y0 component per core
+   document, enforcing the linear recovery–distortion map by construction).
+   Fully deterministic given `(q, r, c, seed)`. No LLM is involved.
+3. **A0 baseline** (`a0.py`) — the scripted seed baseline. It computes,
+   exactly, the achieved distortion `D_seed_d` of the batch-then-track
+   restricted policy class Π^seed on one fixed corpus (subset enumeration
+   over the core set; depths `d = 1` and `d = "inf"`). A0 is a calibration
+   baseline for the theory surface. It is **not** the definitional infimum
+   D* over the full adaptive class Π_θ, and it never reads document bodies.
+
+Out of scope in this round: Figure 2, any LLM arm (Blind-ID / Metadata /
+Semantic-search), human validity, bilingual corpora, large simulation grids.
+
+## Commands
+
+```
+pip install -r requirements.txt
+pytest
+python scripts/regenerate_fig1.py
+python scripts/run_a0_smoke.py
+```
+
+All commands finish in seconds. Figures land in `outputs/figures/`,
+the smoke log in `outputs/logs/`.
+
+## Layout
+
+```
+src/transparency_sim/   theory.py  corpus.py  generator.py  a0.py  plots.py
+scripts/                regenerate_fig1.py  run_a0_smoke.py
+tests/                  test_theory.py  test_generator.py  test_a0.py
+outputs/                figures/  logs/
+manuscript_diff_recommendations.md
+```
+
+## Environment API and Blind-ID arm (scripted dry run; no LLM yet)
+
+`environment.py` exposes the sequential-fetch interface that enforces the
+resource profile at the boundary: `list_ids` (anonymous ids only), `fetch`
+(costs 1 unit of the direct-acquisition budget B), and `resolve` (free at
+kappa = 0, depth-capped at d in {1, "inf"}). The Blind-ID observer class sees
+nothing but anonymous ids before fetching; metadata and search are *not*
+part of this class and will be separate observer classes later.
+`scoring.py` scores structured answers against the generator's ground-truth
+key deterministically (normalized exact match; the linear map of
+Assumption 4). No model ever acts as a judge. `blind_id.py` provides
+scripted policies and a harness; `scripts/run_blind_id_dryrun.py` runs a
+seeded dry run and cross-checks answer-based distortion against
+recovery-based distortion on every run. No LLM is called in this round.

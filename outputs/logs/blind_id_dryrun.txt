@@ -1,0 +1,31 @@
+Blind-ID dry run (scripted sequential policy; no LLM in this round)
+corpus: q=50 r=5 c=0.5 seed=2 | observer: B=10 depth=inf kappa=0
+A0 reference on the same corpus: D_seed_1 = 0.4397  D_seed_inf = 0.3106
+
+seed  paid_fetch  resolves  recovered/r  D_hat  D_rec  match
+   0          10         4          5/5  0.0000  0.0000     OK
+   1          10         4          5/5  0.0000  0.0000     OK
+   2          10         4          5/5  0.0000  0.0000     OK
+   3          10         0          0/5  1.0000  1.0000     OK
+   4          10         4          5/5  0.0000  0.0000     OK
+   5          10         4          5/5  0.0000  0.0000     OK
+   6          10         4          5/5  0.0000  0.0000     OK
+   7          10         4          5/5  0.0000  0.0000     OK
+   8          10         4          5/5  0.0000  0.0000     OK
+   9          10         4          5/5  0.0000  0.0000     OK
+  10          10         0          0/5  1.0000  1.0000     OK
+  11          10         4          5/5  0.0000  0.0000     OK
+  12          10         4          5/5  0.0000  0.0000     OK
+  13          10         0          0/5  1.0000  1.0000     OK
+  14          10         4          5/5  0.0000  0.0000     OK
+  15          10         0          0/5  1.0000  1.0000     OK
+  16          10         0          0/5  1.0000  1.0000     OK
+  17          10         4          5/5  0.0000  0.0000     OK
+  18          10         0          0/5  1.0000  1.0000     OK
+  19          10         4          5/5  0.0000  0.0000     OK
+
+mean D_hat = 0.3000   min = 0.0000   max = 1.0000
+NullPolicy: D_hat = 1.0000
+invariants: D_hat == D_rec in all 20 runs: OK | paid_fetch == 10 in all runs: OK
+note: sequential exclusion can make mean D_hat slightly below D_seed_inf; not a bug.
+log written: outputs/logs/blind_id_dryrun.txt

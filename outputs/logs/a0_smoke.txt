@@ -1,0 +1,7 @@
+A0 smoke run: D_seed_d on one fixed corpus per setting (D0 = 1)
+
+   q   r    c    B seed |  E[F] d=1   D d=1 | E[F] d=inf  D d=inf | theory reference
+------------------------------------------------------------------------------------
+  50   5  0.0   10    1 |    1.0000  0.8000 |     1.0000   0.8000 | c=0 exact: D = 1 - B/q = 0.8000
+  50   5  0.5   10    2 |    2.8013  0.4397 |     3.4472   0.3106 | 0 < c < 1: graph-specific value; d=inf distortion <= d=1
+  50   5  1.0   10    3 |    3.4472  0.3106 |     3.4472   0.3106 | c=1 exact: D = Pr(m=0) = 0.3106
