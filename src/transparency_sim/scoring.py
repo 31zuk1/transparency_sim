@@ -50,3 +50,26 @@ def recovery_distortion(corpus: Corpus, obtained_ids: Iterable[str]) -> float:
         if doc.is_core and doc.component_key is not None:
             recovered.add(doc.component_key)
     return 1.0 - len(recovered) / corpus.r
+
+
+# --- Answer sheet (questionnaire) for the Blind-ID arm ---------------------
+# The questions describe component TYPES generically. They must not mention
+# any pool value, core/distractor status, or the number of core documents.
+
+COMPONENT_QUESTIONS: dict[str, str] = {
+    "authority": "Which body held final signing power for the matter?",
+    "rationale": "What stated grounds was the determination based on?",
+    "rejected_option": "Which option did the committee set aside?",
+    "timeline": "On what date was the operative decision entered into the register?",
+    "consultation": "What unminuted exchange took place before the session?",
+    "venue": "Where were the proceedings held?",
+    "budget_line": "What financing provision did the financing clause fix?",
+    "vote_split": "By what division of the members present did the motion carry?",
+}
+
+
+def answer_sheet(r: int) -> tuple[tuple[str, str], ...]:
+    """((component_key, question), ...) を i = 1..r の順で返す。"""
+    return tuple(
+        (key, COMPONENT_QUESTIONS[ctype]) for key, ctype in component_schema(r)
+    )

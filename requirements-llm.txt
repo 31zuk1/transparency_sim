@@ -1,0 +1,3 @@
+# Optional: live LLM clients only. Tests and the default dry run never need these.
+anthropic
+openai

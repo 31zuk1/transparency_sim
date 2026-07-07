@@ -66,3 +66,19 @@ Assumption 4). No model ever acts as a judge. `blind_id.py` provides
 scripted policies and a harness; `scripts/run_blind_id_dryrun.py` runs a
 seeded dry run and cross-checks answer-based distortion against
 recovery-based distortion on every run. No LLM is called in this round.
+
+## LLM Blind-ID arm (opt-in live runs; offline by default)
+
+`llm_blind_id.py` drives the Blind-ID environment through a strict,
+provider-neutral text protocol (LIST / FETCH / RESOLVE / ANSWER, one command
+per reply). The instrument specification I (provider, model, temperature,
+prompt and protocol versions, turn and violation caps) is frozen in
+`instrument.py` and embedded in every JSONL run record together with the
+full conversation, the environment transcript, the deterministic score, and
+the termination reason; failed runs are recorded, never discarded. Tests and
+the default dry run use offline clients only -- `SequentialScriptClient`
+replays the scripted sequential policy through the protocol and must match
+the direct policy run exactly (transport fidelity). Live calls require an
+explicit `--live` flag plus a provider key in the environment, are capped,
+and never appear in tests or CI. API keys are read from environment
+variables and never logged.
