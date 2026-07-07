@@ -122,6 +122,14 @@ class BlindIDEnvironment:
         # K = r is part of the questionnaire shape and does not reveal document roles.
         return self._corpus.r
 
+    @property
+    def depth(self) -> int | str:
+        return self._depth
+
+    @property
+    def kappa(self) -> float:
+        return self._kappa
+
     def obtained_ids(self) -> tuple[str, ...]:
         return tuple(self._obtained_order)
 

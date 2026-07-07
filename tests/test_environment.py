@@ -126,6 +126,14 @@ def test_kappa_positive_not_implemented():
         BlindIDEnvironment(corpus, budget=2, kappa=0.5)
 
 
+def test_depth_and_kappa_are_read_only_public_resource_profile():
+    corpus = generate_corpus(q=20, r=4, c=0.5, seed=12)
+    env = BlindIDEnvironment(corpus, budget=2, depth=1, kappa=0.0)
+
+    assert env.depth == 1
+    assert env.kappa == 0.0
+
+
 def test_transcript_records_ops_costs_depths():
     corpus = generate_corpus(q=20, r=4, c=1.0, seed=11)
     env = BlindIDEnvironment(corpus, budget=2, depth=1)

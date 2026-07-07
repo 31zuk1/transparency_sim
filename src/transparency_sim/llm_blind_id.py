@@ -136,7 +136,7 @@ class LLMBlindIDPolicy:
         sheet_lines = "\n".join(f"{key}: {question}" for key, question in sheet)
         initial_user = INITIAL_USER_TEMPLATE.format(
             budget=env.budget_remaining,
-            depth=_format_depth(self.instrument, env),
+            depth=_format_depth(env),
             r=env.n_components,
             q=len(ids),
             sheet_lines=sheet_lines,
@@ -272,13 +272,8 @@ def _valid_doc_id(value: str) -> bool:
     return value.startswith("DOC_")
 
 
-def _format_depth(instrument: InstrumentSpec, env: BlindIDEnvironment) -> str:
-    del instrument
-    return "inf" if _depth_value(env) == "inf" else str(_depth_value(env))
-
-
-def _depth_value(env: BlindIDEnvironment):
-    return getattr(env, "_depth")
+def _format_depth(env: BlindIDEnvironment) -> str:
+    return "inf" if env.depth == "inf" else str(env.depth)
 
 
 def _ok_document(op: str, budget_remaining: int, view: FetchView) -> str:
