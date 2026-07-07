@@ -131,6 +131,22 @@ def test_aggregate_produces_runs_and_cells_csv(tmp_path):
     assert float(cell_rows[0]["mean_gap"]) == pytest.approx(0.25)
 
 
+def test_aggregate_refuses_missing_a0_coverage(tmp_path):
+    record = tmp_path / "records.jsonl"
+    a0 = tmp_path / "a0.csv"
+    record.write_text(json.dumps(_record("a", 0.0, 0.5, 0.25, 5, 10, 1)) + "\n",
+                      encoding="utf-8")
+    a0.write_text(
+        "config_name,q,c,corpus_seed,B,depth,d_seed_1,d_seed_inf\n"
+        "x,30,0.0,999,10,inf,1.0,1.0\n",
+        encoding="utf-8",
+    )
+
+    assert aggregate_arm_a.main([
+        "--config", str(REHEARSAL), "--records", str(record), "--a0", str(a0),
+    ]) == 2
+
+
 def test_precision_table_formula():
     assert aggregate_arm_a.n_required(0.1, 0.05) == 16
 
@@ -148,6 +164,14 @@ def test_fig2_offline_has_watermark_and_files():
     assert make_fig2.WATERMARK == "OFFLINE REHEARSAL - scripted client - not a result"
     assert png.exists()
     assert pdf.exists()
+
+
+def test_fig2_refuses_missing_a0_coverage():
+    a0_rows = [{"q": "150", "c": "0.0", "B": "10", "corpus_seed": "1"}]
+    obs_rows = [{"q": 150, "c": 0.0, "B": 10, "corpus_seed": 2}]
+
+    with pytest.raises(ValueError, match="A0 table is missing"):
+        make_fig2._assert_a0_covers_observations(a0_rows, obs_rows)
 
 
 def test_live_arm_refuses_without_config_flag_key_and_cap(monkeypatch):

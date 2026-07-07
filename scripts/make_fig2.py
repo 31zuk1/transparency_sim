@@ -36,6 +36,7 @@ def make_fig2(config_path, records_path, a0_path, source: str) -> tuple[Path, Pa
     c_values = sorted({cell.c for cell in p3_cells if cell.q == target_q})
     a0_rows = _read_a0(a0_path, target_q)
     obs = _read_records(records_path, target_q)
+    _assert_a0_covers_observations(a0_rows, obs)
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -138,10 +139,26 @@ def _read_records(path, target_q: int) -> list[dict]:
             "q": corpus["q"],
             "c": corpus["c"],
             "B": record["budget"],
+            "corpus_seed": corpus["seed"],
             "d_hat": record["distortion_answer"],
             "d_rec": record["distortion_recovery"],
         })
     return rows
+
+
+def _assert_a0_covers_observations(a0_rows: list[dict], obs_rows: list[dict]) -> None:
+    available = {
+        (int(row["q"]), float(row["c"]), int(row["B"]), int(row["corpus_seed"]))
+        for row in a0_rows
+    }
+    needed = {
+        (int(row["q"]), float(row["c"]), int(row["B"]), int(row["corpus_seed"]))
+        for row in obs_rows
+    }
+    missing = sorted(needed - available)
+    if missing:
+        preview = ", ".join(str(key) for key in missing[:10])
+        raise ValueError(f"A0 table is missing {len(missing)} record keys: {preview}")
 
 
 if __name__ == "__main__":

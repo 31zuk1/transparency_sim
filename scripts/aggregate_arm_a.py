@@ -37,8 +37,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--precision", nargs="*", type=float, default=[])
     args = parser.parse_args(argv)
     config = load_config(args.config)
-    del config, args.a0
+    del config
     rows = read_run_rows(args.records)
+    if args.a0:
+        missing = missing_a0_keys(rows, args.a0)
+        if missing:
+            print(f"ERROR: A0 table is missing {len(missing)} record keys", file=sys.stderr)
+            for key in missing[:10]:
+                print(f"missing A0 key: {key}", file=sys.stderr)
+            return 2
     out_dir = ROOT / "outputs" / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
     write_csv(out_dir / "arm_a_runs.csv", rows, RUN_FIELDS)
@@ -124,6 +131,23 @@ def cell_summary(rows: list[dict]) -> list[dict]:
 
 def n_required(sd: float, error: float) -> int:
     return math.ceil((1.96 * sd / error) ** 2)
+
+
+def missing_a0_keys(run_rows: list[dict], a0_path) -> list[tuple]:
+    path = Path(a0_path)
+    if not path.exists():
+        return sorted(set(_run_a0_key(row) for row in run_rows))
+    with path.open(newline="", encoding="utf-8") as f:
+        available = {
+            (int(row["q"]), float(row["c"]), int(row["B"]), int(row["corpus_seed"]))
+            for row in csv.DictReader(f)
+        }
+    needed = {_run_a0_key(row) for row in run_rows}
+    return sorted(needed - available)
+
+
+def _run_a0_key(row: dict) -> tuple:
+    return (int(row["q"]), float(row["c"]), int(row["B"]), int(row["corpus_seed"]))
 
 
 def print_precision_table(cell_rows: list[dict], errors: list[float]) -> None:
