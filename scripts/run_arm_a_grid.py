@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def run_a0_arm(config) -> int:
-    out = ROOT / "outputs" / "results" / "a0_grid.csv"
+    out = ROOT / "outputs" / "results" / f"a0_grid_{config.config_name}.csv"
     out.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     cells = sorted_cells(config)
@@ -111,7 +111,7 @@ def run_offline_arm(config) -> int:
             provider="offline",
             model="scripted-sequential",
             harness_version="1.1",
-            max_turns=max(60, plan["cell"].B + config.r + 20),
+            max_turns=_grid_max_turns(plan["cell"].B),
             requested_seed=plan["rep_seed"],
         )
         corpus = generate_corpus(
@@ -171,8 +171,13 @@ def run_live_arm(config, provider: str | None, model: str | None, max_new_runs: 
 
     client_cls = AnthropicClient if provider == "anthropic" else OpenAIClient
     client = client_cls(model=model, temperature=0.0, max_output_tokens=300, allow_live=True)
-    instrument = InstrumentSpec(provider=provider, model=model, temperature=0.0)
     for plan in current_slice:
+        instrument = InstrumentSpec(
+            provider=provider,
+            model=model,
+            temperature=0.0,
+            max_turns=_grid_max_turns(plan["cell"].B),
+        )
         corpus = generate_corpus(
             q=plan["cell"].q,
             r=config.r,
@@ -213,6 +218,10 @@ def _planned_runs(config, arm: str) -> list[dict]:
                     "run_key": run_key(cell, instance_index, rep_index, arm),
                 })
     return plans
+
+
+def _grid_max_turns(B: int) -> int:
+    return max(60, 2 * B + 20)
 
 
 def _extra_meta(config, plan: dict, arm: str) -> dict:

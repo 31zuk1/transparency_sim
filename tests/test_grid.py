@@ -24,6 +24,10 @@ PILOT = Path("configs/grid_pilot.json")
 REHEARSAL = Path("configs/grid_rehearsal_offline.json")
 
 
+def _a0_path(config_path: Path) -> Path:
+    return Path("outputs/results") / f"a0_grid_{load_config(config_path).config_name}.csv"
+
+
 def test_load_config_validates_and_merges_duplicate_cells():
     config = load_config(PILOT)
 
@@ -63,7 +67,7 @@ def test_completed_keys_scans_jsonl(tmp_path):
 
 
 def test_a0_arm_writes_csv_with_exact_values():
-    out = Path("outputs/results/a0_grid.csv")
+    out = _a0_path(REHEARSAL)
     if out.exists():
         out.unlink()
 
@@ -80,7 +84,7 @@ def test_a0_arm_writes_csv_with_exact_values():
 
 def test_a0_arm_dense_sweep_for_p3_cells():
     run_arm_a_grid.main(["--config", str(REHEARSAL), "--arm", "a0"])
-    rows = list(csv.DictReader(Path("outputs/results/a0_grid.csv").open(encoding="utf-8")))
+    rows = list(csv.DictReader(_a0_path(REHEARSAL).open(encoding="utf-8")))
     p3_bs = {
         int(r["B"]) for r in rows
         if r["q"] == "30" and r["c"] == "1.0"
@@ -157,7 +161,7 @@ def test_fig2_offline_has_watermark_and_files():
     png, pdf = make_fig2.make_fig2(
         REHEARSAL,
         "outputs/runs/arm_a/arm_a_rehearsal_offline_offline.jsonl",
-        "outputs/results/a0_grid.csv",
+        str(_a0_path(REHEARSAL)),
         "offline",
     )
 
@@ -306,7 +310,7 @@ def test_cell_scope_backward_compatible():
 
 
 def test_a0_arm_dedups_corpora_under_qc_scope():
-    out = Path("outputs/results/a0_grid.csv")
+    out = _a0_path(PAIRED)
     if out.exists():
         out.unlink()
 
@@ -416,10 +420,10 @@ def test_contrasts_script_end_to_end_offline():
     assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "a0"]) == 0
     assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "offline"]) == 0
     assert aggregate_arm_a.main([
-        "--config", str(PAIRED), "--records", str(record), "--a0", "outputs/results/a0_grid.csv",
+        "--config", str(PAIRED), "--records", str(record), "--a0", str(_a0_path(PAIRED)),
     ]) == 0
     assert analyze_contrasts.main([
-        "--config", str(PAIRED), "--records", str(record), "--a0", "outputs/results/a0_grid.csv",
+        "--config", str(PAIRED), "--records", str(record), "--a0", str(_a0_path(PAIRED)),
     ]) == 0
     rows = list(csv.DictReader(out.open(encoding="utf-8")))
 
@@ -437,6 +441,57 @@ def test_validate_records_detects_duplicates_and_schema(tmp_path):
     )
 
     assert validate_records.main(["--records", str(records), "--config", str(PAIRED)]) == 2
+
+
+def test_a0_output_path_is_config_scoped():
+    pilot_out = _a0_path(PILOT)
+    paired_out = _a0_path(PAIRED)
+    for out in (pilot_out, paired_out):
+        if out.exists():
+            out.unlink()
+
+    assert run_arm_a_grid.main(["--config", str(PILOT), "--arm", "a0"]) == 0
+    pilot_rows_before = list(csv.DictReader(pilot_out.open(encoding="utf-8")))
+    assert len(pilot_rows_before) == 2757
+    assert not paired_out.exists()
+
+    assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "a0"]) == 0
+    pilot_rows_after = list(csv.DictReader(pilot_out.open(encoding="utf-8")))
+    paired_rows = list(csv.DictReader(paired_out.open(encoding="utf-8")))
+
+    assert pilot_rows_after == pilot_rows_before
+    assert len(paired_rows) == 64
+
+
+def test_max_turns_scales_with_budget_in_grid_arms(tmp_path):
+    config_path = tmp_path / "turns_scale.json"
+    config_path.write_text(json.dumps({
+        "config_name": "arm_a_turns_scale_test",
+        "r": 5,
+        "depth": "inf",
+        "delta": 0.5,
+        "instances_per_cell": 1,
+        "reps_per_instance": 1,
+        "instance_seed_base": 808080,
+        "live_allowed": False,
+        "cells": [
+            {"q": 30, "c": 0.0, "B": 10, "series": ["P1"]},
+            {"q": 30, "c": 0.0, "B": 25, "series": ["P3"]},
+        ],
+    }), encoding="utf-8")
+    record = Path("outputs/runs/arm_a/arm_a_turns_scale_test_offline.jsonl")
+    if record.exists():
+        record.unlink()
+
+    assert run_arm_a_grid.main(["--config", str(config_path), "--arm", "offline"]) == 0
+    rows = [json.loads(line) for line in record.read_text(encoding="utf-8").splitlines()]
+    turns_by_budget = {
+        row["budget"]: row["instrument"]["max_turns"]
+        for row in rows
+    }
+
+    assert turns_by_budget[10] == 60
+    assert turns_by_budget[25] == 70
 
 
 def _full_grid_record(run_key_value):
