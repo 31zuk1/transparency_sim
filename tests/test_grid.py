@@ -187,7 +187,7 @@ def test_live_arm_refuses_without_config_flag_key_and_cap(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "not-a-real-key")
     assert run_arm_a_grid.main([
         "--config", str(PILOT), "--arm", "live", "--provider", "openai",
-        "--model", "x", "--max-new-runs", "1",
+        "--model", "x", "--max-new-runs", "201",
     ]) != 0
 
 

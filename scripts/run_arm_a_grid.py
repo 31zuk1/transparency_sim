@@ -145,8 +145,8 @@ def run_live_arm(config, provider: str | None, model: str | None, max_new_runs: 
     if provider not in {"anthropic", "openai"} or not model:
         print("--provider and --model are required for live", file=sys.stderr)
         return 2
-    if max_new_runs > 200:
-        print("--max-new-runs must be at most 200", file=sys.stderr)
+    if not (1 <= max_new_runs <= 200):
+        print("--max-new-runs must be between 1 and 200", file=sys.stderr)
         return 2
     key_name = "ANTHROPIC_API_KEY" if provider == "anthropic" else "OPENAI_API_KEY"
     if not os.environ.get(key_name):
@@ -163,16 +163,16 @@ def run_live_arm(config, provider: str | None, model: str | None, max_new_runs: 
     print(f"instrument: {InstrumentSpec(provider=provider, model=model).to_dict()}")
     print(f"completed runs: {len(done)}")
     print(f"planned new runs: {len(pending)}")
-    if len(pending) > max_new_runs:
-        print("--max-new-runs cap exceeded; no live calls made", file=sys.stderr)
-        return 2
     if not pending:
         return 0
+    current_slice = pending[:max_new_runs]
+    if len(pending) > len(current_slice):
+        print(f"running slice: {len(current_slice)} of {len(pending)} pending")
 
     client_cls = AnthropicClient if provider == "anthropic" else OpenAIClient
     client = client_cls(model=model, temperature=0.0, max_output_tokens=300, allow_live=True)
     instrument = InstrumentSpec(provider=provider, model=model, temperature=0.0)
-    for plan in pending:
+    for plan in current_slice:
         corpus = generate_corpus(
             q=plan["cell"].q,
             r=config.r,
