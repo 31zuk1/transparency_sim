@@ -1,0 +1,32 @@
+{
+  "config_name": "arm_a_main_v1",
+  "r": 5,
+  "depth": "inf",
+  "delta": 0.5,
+  "instances_per_cell": 8,
+  "reps_per_instance": 1,
+  "instance_seed_base": 20260801,
+  "live_allowed": true,
+  "corpus_seed_scope": "qc",
+  "cells": [
+    {"q": 50,  "c": 0.0,  "B": 10, "series": ["P1"]},
+    {"q": 150, "c": 0.0,  "B": 10, "series": ["P1", "P3"]},
+    {"q": 500, "c": 0.0,  "B": 10, "series": ["P1"]},
+    {"q": 50,  "c": 0.5,  "B": 10, "series": ["P1"]},
+    {"q": 150, "c": 0.5,  "B": 10, "series": ["P1", "P3"]},
+    {"q": 500, "c": 0.5,  "B": 10, "series": ["P1"]},
+    {"q": 50,  "c": 0.25, "B": 10, "series": ["P2"]},
+    {"q": 100, "c": 0.5,  "B": 10, "series": ["P2"]},
+    {"q": 200, "c": 1.0,  "B": 10, "series": ["P2"]},
+    {"q": 150, "c": 1.0,  "B": 10, "series": ["P3"]},
+    {"q": 150, "c": 0.0,  "B": 20, "series": ["P3"]},
+    {"q": 150, "c": 0.5,  "B": 20, "series": ["P3"]},
+    {"q": 150, "c": 1.0,  "B": 20, "series": ["P3"]},
+    {"q": 150, "c": 0.0,  "B": 40, "series": ["P3"]},
+    {"q": 150, "c": 0.5,  "B": 40, "series": ["P3"]},
+    {"q": 150, "c": 1.0,  "B": 40, "series": ["P3"]},
+    {"q": 150, "c": 0.0,  "B": 80, "series": ["P3"]},
+    {"q": 150, "c": 0.5,  "B": 80, "series": ["P3"]},
+    {"q": 150, "c": 1.0,  "B": 80, "series": ["P3"]}
+  ]
+}
