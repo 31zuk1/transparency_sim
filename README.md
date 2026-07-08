@@ -98,3 +98,17 @@ that fixes instance counts for preregistration. `make_fig2.py` renders the
 figure-2 layout; offline sources are watermarked as rehearsal and are not
 results. Finalized records are promoted to the tracked `data/arm_a/`
 directory (see RUNBOOK_ARM_A.md).
+
+## Paired grids and preregistered contrast estimators
+
+Setting `"corpus_seed_scope": "qc"` keys corpus instances to the (q, c)
+group instead of the cell, so the same corpora are measured at every budget
+level (within-corpus B curves; the A0 dense sweep is computed once per
+corpus). `analyze_contrasts.py` freezes the preregistered estimators: exact
+permutation Jonckheere-Terpstra tests for the ordered P1/P2 contrasts, and
+interval estimates of the budget threshold with theory-bound audit flags
+for P3, computed identically for the observed and recovery distortions and
+for the A0 calibration surface. `validate_records.py` checks schema,
+duplicate run keys, config coverage, and A0 coverage before records are
+promoted into `data/`. Estimator definitions are normative inputs to the
+preregistration and are not to be modified in code review.

@@ -271,3 +271,206 @@ def _record(run_key, c, d_hat, d_rec, paid, B, protocol_errors):
             "series": ["P1"],
         },
     }
+
+
+from scripts import analyze_contrasts, validate_records
+from transparency_sim.grid import qc_groups
+
+
+PAIRED = Path("configs/grid_rehearsal_paired.json")
+
+
+def test_qc_scope_shares_corpora_across_B():
+    config = load_config(PAIRED)
+    cells = sorted_cells(config)
+
+    assert config.corpus_seed_scope == "qc"
+    assert qc_groups(config) == ((30, 0.0), (30, 1.0))
+    assert corpus_seed(config, 1, 0) == corpus_seed(config, 2, 0)
+    assert corpus_seed(config, 1, 1) == corpus_seed(config, 2, 1)
+    assert corpus_seed(config, 0, 0) != corpus_seed(config, 1, 0)
+    assert [(cell.q, cell.c, cell.B) for cell in cells] == [
+        (30, 0.0, 6), (30, 1.0, 4), (30, 1.0, 10),
+    ]
+
+
+def test_cell_scope_backward_compatible():
+    config = load_config(PILOT)
+
+    assert config.corpus_seed_scope == "cell"
+    for cell_index, _cell in enumerate(sorted_cells(config)):
+        for instance_index in range(config.instances_per_cell):
+            assert corpus_seed(config, cell_index, instance_index) == (
+                config.instance_seed_base + 1000 * cell_index + instance_index
+            )
+
+
+def test_a0_arm_dedups_corpora_under_qc_scope():
+    out = Path("outputs/results/a0_grid.csv")
+    if out.exists():
+        out.unlink()
+
+    assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "a0"]) == 0
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    corpora = {(int(row["q"]), float(row["c"]), int(row["corpus_seed"])) for row in rows}
+    b4_seeds = {row["corpus_seed"] for row in rows if row["c"] == "1.0" and row["B"] == "4"}
+    b10_seeds = {row["corpus_seed"] for row in rows if row["c"] == "1.0" and row["B"] == "10"}
+
+    assert len(corpora) == 4
+    assert b4_seeds == b10_seeds
+
+
+def test_jt_exact_permutation_separated_and_flat():
+    separated = analyze_contrasts.ordered_contrast_stats([
+        [0.0, 0.0, 0.0],
+        [1.0, 1.0, 1.0],
+        [2.0, 2.0, 2.0],
+    ])
+    flat = analyze_contrasts.ordered_contrast_stats([
+        [1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0],
+    ])
+
+    assert separated["p_exact"] <= 0.01
+    assert separated["exact_or_mc"] == "exact"
+    assert flat["p_exact"] == 1.0
+
+
+def test_p1_contrast_table_from_crafted_records(tmp_path):
+    config_path = tmp_path / "p1.json"
+    config_path.write_text(json.dumps({
+        "config_name": "p1_crafted",
+        "r": 5,
+        "depth": "inf",
+        "delta": 0.5,
+        "instances_per_cell": 3,
+        "reps_per_instance": 2,
+        "instance_seed_base": 7000,
+        "live_allowed": False,
+        "cells": [
+            {"q": 30, "c": 0.0, "B": 6, "series": ["P1"]},
+            {"q": 60, "c": 0.0, "B": 6, "series": ["P1"]},
+            {"q": 90, "c": 0.0, "B": 6, "series": ["P1"]},
+        ],
+    }), encoding="utf-8")
+    config = load_config(config_path)
+    run_rows = []
+    for cell_index, cell in enumerate(sorted_cells(config)):
+        for instance_index in range(config.instances_per_cell):
+            for rep_index in range(config.reps_per_instance):
+                run_rows.append({
+                    "run_key": run_key(cell, instance_index, rep_index, "offline"),
+                    "q": cell.q,
+                    "c": cell.c,
+                    "B": cell.B,
+                    "corpus_seed": corpus_seed(config, cell_index, instance_index),
+                    "instance_index": instance_index,
+                    "rep_index": rep_index,
+                    "d_hat": [0.2, 0.5, 0.8][cell_index],
+                    "d_rec": [0.1, 0.4, 0.7][cell_index],
+                })
+
+    rows = analyze_contrasts.analyze_contrasts(config, run_rows, [])
+
+    assert len(rows) == 1
+    assert rows[0]["contrast_id"] == "P1_c0.0"
+    assert rows[0]["n_instances_per_group"] == "3"
+    assert rows[0]["delta_hat"] == pytest.approx(0.6)
+    assert rows[0]["delta_hat_rec"] == pytest.approx(0.6)
+    assert rows[0]["p_exact"] <= 0.01
+
+
+def test_bstar_interval_and_bound_flags():
+    stats = analyze_contrasts.p3_stats(
+        [(4, 0.7), (10, 0.4)],
+        delta=0.5,
+        theory_lower=3.0,
+        theory_c1_upper=8.0,
+        c=1.0,
+    )
+    violation = analyze_contrasts.p3_stats(
+        [(0, 0.8), (2, 0.4)],
+        delta=0.5,
+        theory_lower=3.0,
+        theory_c1_upper=8.0,
+        c=0.0,
+    )
+
+    assert analyze_contrasts.bstar_interval([(4, 0.7), (10, 0.4)], 0.5) == (4, 10)
+    assert stats["bstar_lo"] == 4
+    assert stats["bstar_hi"] == 10
+    assert stats["lower_violation"] is False
+    assert stats["overshoot"] == pytest.approx(2.0)
+    assert violation["lower_violation"] is True
+
+
+def test_contrasts_script_end_to_end_offline():
+    record = Path("outputs/runs/arm_a/arm_a_rehearsal_paired_offline.jsonl")
+    out = Path("outputs/results/arm_a_contrasts.csv")
+    if record.exists():
+        record.unlink()
+    if out.exists():
+        out.unlink()
+
+    assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "a0"]) == 0
+    assert run_arm_a_grid.main(["--config", str(PAIRED), "--arm", "offline"]) == 0
+    assert aggregate_arm_a.main([
+        "--config", str(PAIRED), "--records", str(record), "--a0", "outputs/results/a0_grid.csv",
+    ]) == 0
+    assert analyze_contrasts.main([
+        "--config", str(PAIRED), "--records", str(record), "--a0", "outputs/results/a0_grid.csv",
+    ]) == 0
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+
+    assert out.exists()
+    assert any(row["contrast_id"] == "P3_q30_c1.0" for row in rows)
+
+
+def test_validate_records_detects_duplicates_and_schema(tmp_path):
+    records = tmp_path / "records.jsonl"
+    valid = _full_grid_record("q30_c0.0_B6_i0_r0_offline")
+    invalid = {"schema_version": 1, "grid_meta": {"run_key": "bad"}}
+    records.write_text(
+        json.dumps(valid) + "\n" + json.dumps(valid) + "\n" + json.dumps(invalid) + "\n",
+        encoding="utf-8",
+    )
+
+    assert validate_records.main(["--records", str(records), "--config", str(PAIRED)]) == 2
+
+
+def _full_grid_record(run_key_value):
+    return {
+        "schema_version": 1,
+        "instrument": {
+            "provider": "offline",
+            "model": "scripted-sequential",
+            "harness_version": "1.1",
+        },
+        "corpus": {"q": 30, "r": 5, "c": 0.0, "seed": 515151},
+        "budget": 6,
+        "depth": "inf",
+        "conversation": [],
+        "env_transcript": [],
+        "answer_raw": {},
+        "answer_scored": {},
+        "distortion_answer": 0.5,
+        "distortion_recovery": 0.5,
+        "n_fetch_paid": 1,
+        "n_resolve": 0,
+        "n_protocol_errors": 0,
+        "n_sanitized_keys": 0,
+        "terminated_reason": "answered",
+        "n_turns": 1,
+        "usage": None,
+        "timestamp_utc": "2026-07-07T00:00:00Z",
+        "grid_meta": {
+            "run_key": run_key_value,
+            "arm": "offline",
+            "config_name": "arm_a_rehearsal_paired",
+            "cell_index": 0,
+            "instance_index": 0,
+            "rep_index": 0,
+            "series": ["P1"],
+        },
+    }

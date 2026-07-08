@@ -47,22 +47,20 @@ def run_a0_arm(config) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     cells = sorted_cells(config)
-    for cell_index, cell in enumerate(cells):
-        b_values = {cell.B}
-        if "P3" in cell.series:
-            step = max(1, cell.q // 75)
-            b_values.update(range(0, cell.q + 1, step))
-            b_values.add(cell.q)
+    for cell_index, group_cells in _a0_cell_groups(config, cells):
+        q = group_cells[0].q
+        c = group_cells[0].c
+        b_values = _a0_b_values(group_cells)
         for instance_index in range(config.instances_per_cell):
             seed = corpus_seed(config, cell_index, instance_index)
-            corpus = generate_corpus(q=cell.q, r=config.r, c=cell.c, seed=seed)
+            corpus = generate_corpus(q=q, r=config.r, c=c, seed=seed)
             for B in sorted(b_values):
                 d1 = a0_exact(corpus, B, depth=1).distortion
                 di = a0_exact(corpus, B, depth="inf").distortion
                 rows.append({
                     "config_name": config.config_name,
-                    "q": cell.q,
-                    "c": cell.c,
+                    "q": q,
+                    "c": c,
                     "corpus_seed": seed,
                     "B": B,
                     "depth": config.depth,
@@ -75,6 +73,30 @@ def run_a0_arm(config) -> int:
     ])
     print(f"wrote {len(rows)} rows: {out}")
     return 0
+
+
+def _a0_cell_groups(config, cells) -> list[tuple[int, tuple]]:
+    if config.corpus_seed_scope == "cell":
+        return [(cell_index, (cell,)) for cell_index, cell in enumerate(cells)]
+    groups = []
+    seen = set()
+    for cell_index, cell in enumerate(cells):
+        key = (cell.q, cell.c)
+        if key in seen:
+            continue
+        seen.add(key)
+        groups.append((cell_index, tuple(c for c in cells if (c.q, c.c) == key)))
+    return groups
+
+
+def _a0_b_values(cells) -> set[int]:
+    q = cells[0].q
+    b_values = {cell.B for cell in cells}
+    if any("P3" in cell.series for cell in cells):
+        step = max(1, q // 75)
+        b_values.update(range(0, q + 1, step))
+        b_values.add(q)
+    return b_values
 
 
 def run_offline_arm(config) -> int:

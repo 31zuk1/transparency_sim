@@ -1,0 +1,16 @@
+{
+  "config_name": "arm_a_rehearsal_paired",
+  "r": 5,
+  "depth": "inf",
+  "delta": 0.5,
+  "instances_per_cell": 2,
+  "reps_per_instance": 1,
+  "instance_seed_base": 515151,
+  "live_allowed": false,
+  "corpus_seed_scope": "qc",
+  "cells": [
+    {"q": 30, "c": 1.0, "B": 4,  "series": ["P3"]},
+    {"q": 30, "c": 1.0, "B": 10, "series": ["P3"]},
+    {"q": 30, "c": 0.0, "B": 6,  "series": ["P1"]}
+  ]
+}

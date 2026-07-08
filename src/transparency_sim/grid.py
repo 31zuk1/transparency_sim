@@ -25,6 +25,7 @@ class GridConfig:
     reps_per_instance: int
     instance_seed_base: int
     live_allowed: bool
+    corpus_seed_scope: str = "cell"
 
 
 def load_config(path) -> GridConfig:
@@ -40,6 +41,9 @@ def load_config(path) -> GridConfig:
         raise ValueError("delta must lie in (0, 1)")
     if data["instances_per_cell"] < 1 or data["reps_per_instance"] < 1:
         raise ValueError("instances_per_cell and reps_per_instance must be positive")
+    corpus_seed_scope = data.get("corpus_seed_scope", "cell")
+    if corpus_seed_scope not in {"cell", "qc"}:
+        raise ValueError("corpus_seed_scope must be 'cell' or 'qc'")
 
     merged: dict[tuple[int, float, int], set[str]] = {}
     for raw in data["cells"]:
@@ -69,6 +73,7 @@ def load_config(path) -> GridConfig:
         reps_per_instance=data["reps_per_instance"],
         instance_seed_base=data["instance_seed_base"],
         live_allowed=bool(data["live_allowed"]),
+        corpus_seed_scope=corpus_seed_scope,
     )
 
 
@@ -76,8 +81,28 @@ def sorted_cells(config: GridConfig) -> tuple[GridCell, ...]:
     return tuple(sorted(config.cells, key=lambda cell: (cell.q, cell.c, cell.B)))
 
 
+def qc_groups(config: GridConfig) -> tuple[tuple[int, float], ...]:
+    groups = []
+    seen = set()
+    for cell in sorted_cells(config):
+        key = (cell.q, cell.c)
+        if key not in seen:
+            seen.add(key)
+            groups.append(key)
+    return tuple(groups)
+
+
+def qc_index(config: GridConfig, cell: GridCell) -> int:
+    return qc_groups(config).index((cell.q, cell.c))
+
+
 def corpus_seed(config: GridConfig, cell_index: int, instance_index: int) -> int:
-    return config.instance_seed_base + 1000 * cell_index + instance_index
+    if config.corpus_seed_scope == "cell":
+        return config.instance_seed_base + 1000 * cell_index + instance_index
+    if config.corpus_seed_scope == "qc":
+        cell = sorted_cells(config)[cell_index]
+        return config.instance_seed_base + 1000 * qc_index(config, cell) + instance_index
+    raise ValueError("corpus_seed_scope must be 'cell' or 'qc'")
 
 
 def rep_seed(cell_index: int, instance_index: int, rep_index: int) -> int:
